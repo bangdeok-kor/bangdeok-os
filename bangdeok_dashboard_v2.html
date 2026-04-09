@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="방덕OS">
+<title>방덕 Executive OS</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --text: #f0f0f0;
+    --text-dim: #666;
+    --soma: #e85d3a;
+    --himuzip: #4a9eff;
+    --bamaum: #a855f7;
+    --faculty: #22c55e;
+    --father: #f59e0b;
+    --urgent: #ff3b3b;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+
+  .header {
+    padding: 52px 20px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,10,10,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .header-top { display: flex; justify-content: space-between; align-items: flex-start; }
+
+  .greeting {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .date-display { font-size: 20px; font-weight: 700; }
+  .time-display { font-family: 'Space Mono', monospace; font-size: 26px; font-weight: 700; color: var(--text-dim); }
+
+  .sync-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 8px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .sync-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-dim);
+  }
+
+  .sync-dot.syncing { background: var(--father); animation: pulse 1s infinite; }
+  .sync-dot.ok { background: var(--faculty); }
+  .sync-dot.error { background: var(--urgent); }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .alert-bar {
+    margin: 10px 20px;
+    padding: 10px 14px;
+    background: rgba(255,59,59,0.1);
+    border: 1px solid rgba(255,59,59,0.3);
+    border-radius: 12px;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--urgent);
+  }
+  .alert-bar.show { display: flex; }
+  .alert-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--urgent); animation: pulse 1.5s infinite; flex-shrink: 0; }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 12px 20px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+  }
+
+  .stat-num { font-family: 'Space Mono', monospace; font-size: 22px; font-weight: 700; line-height: 1; margin-bottom: 3px; }
+  .stat-label { font-size: 10px; color: var(--text-dim); }
+
+  .tabs {
+    display: flex;
+    gap: 6px;
+    padding: 0 20px 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    transition: all 0.2s;
+  }
+
+  .tab.active { color: #000; border-color: transparent; }
+  .tab[data-f="all"].active { background: var(--text); }
+  .tab[data-f="Soma"].active { background: var(--soma); }
+  .tab[data-f="Himuzip"].active { background: var(--himuzip); }
+  .tab[data-f="Bamaum"].active { background: var(--bamaum); }
+  .tab[data-f="Faculty"].active { background: var(--faculty); }
+  .tab[data-f="Father"].active { background: var(--father); }
+
+  .section { padding: 0 20px; margin-bottom: 20px; }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .task-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 13px 15px;
+    margin-bottom: 7px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+
+  .task-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+
+  .task-card[data-u="Soma"]::before { background: var(--soma); }
+  .task-card[data-u="Himuzip"]::before { background: var(--himuzip); }
+  .task-card[data-u="Bamaum"]::before { background: var(--bamaum); }
+  .task-card[data-u="Faculty"]::before { background: var(--faculty); }
+  .task-card[data-u="Father"]::before { background: var(--father); }
+  .task-card[data-u="[System]"]::before { background: var(--text-dim); }
+
+  .task-card.urgent { border-color: rgba(255,59,59,0.3); background: rgba(255,59,59,0.04); }
+  .task-card.done { opacity: 0.35; }
+  .task-card.done .task-title { text-decoration: line-through; }
+
+  .task-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .task-title { font-size: 13px; font-weight: 500; line-height: 1.4; flex: 1; padding-right: 8px; }
+
+  .task-check {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    transition: all 0.2s;
+  }
+  .task-card.done .task-check { background: var(--faculty); border-color: var(--faculty); color: #000; }
+
+  .task-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+  .tag {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+
+  .tag-Soma { background: rgba(232,93,58,0.15); color: var(--soma); }
+  .tag-Himuzip { background: rgba(74,158,255,0.15); color: var(--himuzip); }
+  .tag-Bamaum { background: rgba(168,85,247,0.15); color: var(--bamaum); }
+  .tag-Faculty { background: rgba(34,197,94,0.15); color: var(--faculty); }
+  .tag-Father { background: rgba(245,158,11,0.15); color: var(--father); }
+  .tag-urgent { background: rgba(255,59,59,0.15); color: var(--urgent); }
+  .tag-high, .tag-높음, .tag-크리티컬 { background: rgba(255,59,59,0.1); color: #ff6b6b; }
+  .tag-mid, .tag-중간 { background: rgba(255,165,0,0.1); color: #ffa500; }
+  .tag-low, .tag-낮음 { background: rgba(100,100,100,0.2); color: var(--text-dim); }
+
+  .task-due { font-size: 10px; color: var(--text-dim); font-family: 'Space Mono', monospace; }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+
+  .add-section {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    padding: 12px 20px 28px;
+    background: linear-gradient(0deg, var(--bg) 60%, transparent 100%);
+    z-index: 100;
+  }
+
+  .bottom-btns { display: flex; gap: 8px; }
+
+  .add-btn {
+    flex: 1;
+    padding: 15px;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'Noto Sans KR', sans-serif;
+    cursor: pointer;
+  }
+
+  .refresh-btn {
+    padding: 15px 18px;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    font-size: 18px;
+    cursor: pointer;
+  }
+
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 200;
+    display: none;
+    align-items: flex-end;
+  }
+  .modal-overlay.show { display: flex; }
+
+  .modal {
+    width: 100%;
+    background: var(--surface);
+    border-radius: 24px 24px 0 0;
+    padding: 20px 20px 40px;
+    animation: slideUp 0.3s ease;
+  }
+
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+  .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
+  .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+
+  .input-field {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: 'Noto Sans KR', sans-serif;
+    margin-bottom: 10px;
+    outline: none;
+  }
+
+  .uni-row { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+
+  .uni-btn {
+    padding: 6px 13px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-family: 'Noto Sans KR', sans-serif;
+    transition: all 0.15s;
+  }
+
+  .uni-btn.sel-Soma { background: var(--soma); color: #fff; border-color: var(--soma); }
+  .uni-btn.sel-Himuzip { background: var(--himuzip); color: #fff; border-color: var(--himuzip); }
+  .uni-btn.sel-Bamaum { background: var(--bamaum); color: #fff; border-color: var(--bamaum); }
+  .uni-btn.sel-Faculty { background: var(--faculty); color: #000; border-color: var(--faculty); }
+  .uni-btn.sel-Father { background: var(--father); color: #000; border-color: var(--father); }
+  .uni-btn.sel-urgent { background: rgba(255,59,59,0.2); color: var(--urgent); border-color: var(--urgent); }
+
+  .save-btn {
+    width: 100%;
+    padding: 15px;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: 'Noto Sans KR', sans-serif;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="greeting">Executive OS</div>
+      <div class="date-display" id="dateDisplay">—</div>
+    </div>
+    <div class="time-display" id="timeDisplay">—</div>
+  </div>
+  <div class="sync-status">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncText">연결 중...</span>
+  </div>
+</div>
+
+<div class="alert-bar" id="alertBar">
+  <div class="alert-dot"></div>
+  <span id="alertText"></span>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-num" id="statTotal">—</div>
+    <div class="stat-label">전체</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num" style="color:var(--urgent)" id="statUrgent">—</div>
+    <div class="stat-label">긴급</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num" style="color:var(--faculty)" id="statDone">—</div>
+    <div class="stat-label">완료</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-f="all">전체</div>
+  <div class="tab" data-f="Soma">Soma</div>
+  <div class="tab" data-f="Himuzip">Himuzip</div>
+  <div class="tab" data-f="Bamaum">Bamaum</div>
+  <div class="tab" data-f="Faculty">Faculty</div>
+  <div class="tab" data-f="Father">Father</div>
+</div>
+
+<div class="section">
+  <div class="section-label">업무 목록</div>
+  <div id="taskList"><div class="empty-state">데이터 불러오는 중...</div></div>
+</div>
+
+<div class="add-section">
+  <div class="bottom-btns">
+    <button class="add-btn" onclick="openModal()">+ 업무 추가</button>
+    <button class="refresh-btn" onclick="loadFromSheets()" title="새로고침">↻</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="closeOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">새 업무 추가</div>
+    <input class="input-field" id="taskInput" placeholder="업무 내용" />
+    <input class="input-field" id="dueInput" placeholder="마감기한 (예: 4/15)" />
+    <div class="uni-row">
+      <button class="uni-btn" data-u="Soma" onclick="selUni(this)">Soma</button>
+      <button class="uni-btn" data-u="Himuzip" onclick="selUni(this)">Himuzip</button>
+      <button class="uni-btn" data-u="Bamaum" onclick="selUni(this)">Bamaum</button>
+      <button class="uni-btn" data-u="Faculty" onclick="selUni(this)">Faculty</button>
+      <button class="uni-btn" data-u="Father" onclick="selUni(this)">Father</button>
+    </div>
+    <div class="uni-row">
+      <button class="uni-btn" id="urgentBtn" onclick="toggleUrgent(this)">🔴 긴급</button>
+    </div>
+    <button class="save-btn" onclick="addTask()">추가하기</button>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────
+const SHEETS_API = 'https://script.google.com/macros/s/AKfycbxkht84mrx0IGD_9WGn1Xwk54y9NCUoeLRj9e1QkjEovJPSPKB7-Rx6t6_jqAjrVw8wcQ/exec';
+
+// ── STATE ───────────────────────────────────────────
+let sheetsData = [];
+let localTasks = JSON.parse(localStorage.getItem('bd_local') || '[]');
+let currentFilter = 'all';
+let selectedUni = 'Soma';
+let isUrgent = false;
+
+// ── TIME ────────────────────────────────────────────
+function updateTime() {
+  const now = new Date();
+  const days = ['일','월','화','수','목','금','토'];
+  document.getElementById('dateDisplay').textContent =
+    `${now.getMonth()+1}월 ${now.getDate()}일 (${days[now.getDay()]})`;
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('timeDisplay').textContent = `${h}:${m}`;
+}
+setInterval(updateTime, 1000);
+updateTime();
+
+// ── SHEETS LOAD ─────────────────────────────────────
+function setSyncStatus(state, text) {
+  const dot = document.getElementById('syncDot');
+  const txt = document.getElementById('syncText');
+  dot.className = 'sync-dot ' + state;
+  txt.textContent = text;
+}
+
+function loadFromSheets() {
+  setSyncStatus('syncing', '시트 동기화 중...');
+  fetch(SHEETS_API)
+    .then(r => r.json())
+    .then(data => {
+      sheetsData = data;
+      const now = new Date();
+      setSyncStatus('ok', `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')} 동기화 완료`);
+      render();
+    })
+    .catch(err => {
+      setSyncStatus('error', '연결 실패 — 로컬 데이터 표시 중');
+      render();
+    });
+}
+
+// ── MERGE DATA ──────────────────────────────────────
+function getAllTasks() {
+  // Sheets 데이터 정규화
+  const fromSheets = sheetsData.map(row => ({
+    id: row['ID'] || row['id'] || '',
+    title: row['Task'] || row['task'] || row['업무명'] || '',
+    universe: row['Universe'] || row['universe'] || '',
+    priority: row['Priority'] || row['priority'] || row['우선순위'] || '',
+    due: row['DueDate'] || row['dueDate'] || row['마감기한'] || '',
+    status: row['Status'] || row['status'] || row['상태'] || '',
+    aiProposal: row['AI Proposal'] || row['aiProposal'] || '',
+    source: 'sheets',
+    done: (row['Status'] || row['status'] || '').includes('완료'),
+    urgent: (row['Priority'] || row['priority'] || '').includes('크리티컬') ||
+            (row['Priority'] || row['priority'] || '').includes('긴급')
+  })).filter(t => t.title);
+
+  // 로컬 추가 업무
+  const fromLocal = localTasks.map(t => ({ ...t, source: 'local' }));
+
+  return [...fromSheets, ...fromLocal];
+}
+
+// ── RENDER ──────────────────────────────────────────
+function render() {
+  const all = getAllTasks();
+  const filtered = currentFilter === 'all' ? all : all.filter(t => t.universe === currentFilter);
+
+  const urgent = filtered.filter(t => t.urgent && !t.done);
+  const normal = filtered.filter(t => !t.urgent && !t.done);
+  const done = filtered.filter(t => t.done);
+
+  // Stats
+  document.getElementById('statTotal').textContent = all.filter(t => !t.done).length;
+  document.getElementById('statUrgent').textContent = all.filter(t => t.urgent && !t.done).length;
+  document.getElementById('statDone').textContent = all.filter(t => t.done).length;
+
+  // Alert
+  const urgentCount = all.filter(t => t.urgent && !t.done).length;
+  const alertBar = document.getElementById('alertBar');
+  if (urgentCount > 0) {
+    alertBar.classList.add('show');
+    document.getElementById('alertText').textContent = `긴급 업무 ${urgentCount}개 — 지금 확인하세요`;
+  } else {
+    alertBar.classList.remove('show');
+  }
+
+  // Task list
+  const list = document.getElementById('taskList');
+  const tasks = [...urgent, ...normal, ...done];
+
+  if (tasks.length === 0) {
+    list.innerHTML = '<div class="empty-state">이 Universe에 업무가 없어요 🎉</div>';
+    return;
+  }
+
+  list.innerHTML = tasks.map(t => {
+    const uniClass = t.universe ? `tag-${t.universe}` : '';
+    const prioClass = t.priority ? `tag-${t.priority}` : '';
+    return `
+      <div class="task-card${t.urgent?' urgent':''}${t.done?' done':''}" data-u="${t.universe}" onclick="toggleLocal('${t.id || t.title}')">
+        <div class="task-top">
+          <div class="task-title">${t.title}</div>
+          <div class="task-check">${t.done ? '✓' : ''}</div>
+        </div>
+        <div class="task-meta">
+          ${t.universe ? `<span class="tag ${uniClass}">${t.universe}</span>` : ''}
+          ${t.urgent ? '<span class="tag tag-urgent">긴급</span>' : ''}
+          ${t.priority ? `<span class="tag ${prioClass}">${t.priority}</span>` : ''}
+          ${t.due ? `<span class="task-due">${t.due}</span>` : ''}
+          ${t.source === 'local' ? '<span class="tag" style="background:rgba(255,255,255,0.05);color:var(--text-dim)">로컬</span>' : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── TOGGLE DONE (로컬) ──────────────────────────────
+function toggleLocal(id) {
+  // 로컬 업무만 토글
+  const idx = localTasks.findIndex(t => t.id === id || t.title === id);
+  if (idx >= 0) {
+    localTasks[idx].done = !localTasks[idx].done;
+    localStorage.setItem('bd_local', JSON.stringify(localTasks));
+    render();
+  }
+}
+
+// ── TABS ────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentFilter = tab.dataset.f;
+    render();
+  });
+});
+
+// ── MODAL ───────────────────────────────────────────
+function openModal() {
+  document.getElementById('modalOverlay').classList.add('show');
+  document.getElementById('taskInput').focus();
+}
+
+function closeOutside(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+  document.getElementById('taskInput').value = '';
+  document.getElementById('dueInput').value = '';
+  isUrgent = false;
+  document.getElementById('urgentBtn').className = 'uni-btn';
+  document.querySelectorAll('.uni-btn[data-u]').forEach(b => b.className = 'uni-btn');
+  selectedUni = 'Soma';
+}
+
+function selUni(btn) {
+  document.querySelectorAll('.uni-btn[data-u]').forEach(b => b.className = 'uni-btn');
+  btn.className = `uni-btn sel-${btn.dataset.u}`;
+  selectedUni = btn.dataset.u;
+}
+
+function toggleUrgent(btn) {
+  isUrgent = !isUrgent;
+  btn.className = isUrgent ? 'uni-btn sel-urgent' : 'uni-btn';
+}
+
+function addTask() {
+  const title = document.getElementById('taskInput').value.trim();
+  if (!title) return;
+  const task = {
+    id: 'local_' + Date.now(),
+    title,
+    universe: selectedUni,
+    priority: isUrgent ? '긴급' : '중간',
+    due: document.getElementById('dueInput').value.trim(),
+    done: false,
+    urgent: isUrgent
+  };
+  localTasks.unshift(task);
+  localStorage.setItem('bd_local', JSON.stringify(localTasks));
+  render();
+  closeModal();
+}
+
+// ── INIT ────────────────────────────────────────────
+loadFromSheets();
+// 10분마다 자동 새로고침
+setInterval(loadFromSheets, 600000);
+</script>
+</body>
+</html>
